@@ -3,6 +3,12 @@ from torch import nn, Tensor
 from typing import List
 from functools import reduce
 
+def normalize_adjacency_matrix(A: torch.Tensor) -> torch.Tensor:
+    D = torch.diag(torch.pow(A.sum(1), -0.5))
+    D[D == float('inf')] = 0
+    A_hat = torch.matmul(torch.matmul(D, A), D)
+    return A_hat
+
 class VolterraGraphConvLayer(nn.Module):
     def __init__(self, in_dim: int, out_dim: int, order: int, adjacency_matrix_powers: List[Tensor]):
         super(VolterraGraphConvLayer, self).__init__()
@@ -37,15 +43,19 @@ class VolterraGCN(nn.Module):
         
         powers = [torch.eye(adjacency_matrix.shape[0])]
         for _ in range(1, order + 1):
+            A_next = torch.matmul(powers[-1], adjacency_matrix)
+            A_next = normalize_adjacency_matrix(A_next)
             powers.append(torch.matmul(powers[-1], adjacency_matrix))
         
         self.input_layer = VolterraGraphConvLayer(in_dim, hidden_dim, order, powers)
         self.hidden_layers = nn.ModuleList([VolterraGraphConvLayer(hidden_dim, hidden_dim, order, powers) for _ in range(num_layers)])
         self.out_layer = VolterraGraphConvLayer(hidden_dim, num_outputs, order, powers)
+        self.batch_norm = nn.BatchNorm1d(hidden_dim)
     
     def forward(self, X: Tensor) -> Tensor:
         X = self.input_layer(X)
         for layer in self.hidden_layers:
             X = layer(X)
+            X = self.batch_norm(X)
         X = self.out_layer(X)
         return X
