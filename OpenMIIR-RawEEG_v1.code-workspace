@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "OpenMIIR-RawEEG_v1",
+			"path": "../../../../Documents/Downloads/OpenMIIR-RawEEG_v1"
+		},
+		{
+			"name": "Volterra-Graph-Convolutional-Network",
+			"path": "."
+		}
+	],
+	"settings": {}
+}

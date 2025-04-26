@@ -10,12 +10,13 @@ dataset = Planetoid(root='data/Cora', name='Cora')
 data = dataset[0]
 
 A = to_dense_adj(data.edge_index)[0]
+A = torch.eye(len(A))*torch.diag(A) - A
 X = data.x
 y = data.y
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-model = VolterraGCN(in_dim=X.shape[1], hidden_dim=512, order=2, adjacency_matrix=A, num_layers=4, num_outputs=dataset.num_classes).to(device)
+model = VolterraGCN(in_dim=X.shape[1], hidden_dim=512, order=1, adjacency_matrix=A, num_layers=4, num_outputs=dataset.num_classes).to(device)
 X, A, y = X.to(device), A.to(device), y.to(device)
 
 X = (X - X.mean(dim=0)) / (X.std(dim=0) + 1e-8)
@@ -30,7 +31,7 @@ A = normalize_adjacency_matrix(A)
 A = A / torch.linalg.norm(A, ord=2)
 
 
-optimizer = optim.AdamW(model.parameters(), lr=4e-4)
+optimizer = optim.AdamW(model.parameters(), lr=1e-3)
 criterion = nn.CrossEntropyLoss()
 
 num_epochs = 200

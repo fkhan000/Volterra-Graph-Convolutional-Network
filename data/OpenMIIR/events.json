@@ -1,0 +1,63 @@
+{
+    "1": {
+      "name": "Chim Chim Cheree (lyrics)",
+      "duration_no_cue": 13.3157,
+      "duration_cue": 14.9657
+    },
+    "2": {
+      "name": "Take me out to the ballgame (lyrics)",
+      "duration_no_cue": 7.6682,
+      "duration_cue": 9.5352
+    },
+    "3": {
+      "name": "Jingle Bells (lyrics)",
+      "duration_no_cue": 9.6627,
+      "duration_cue": 11.9797
+    },
+    "4": {
+      "name": "Mary Had a Little Lamb (lyrics)",
+      "duration_no_cue": 11.6232,
+      "duration_cue": 14.6112
+    },
+    "11": {
+      "name": "Chim Chim Cheree (no lyrics)",
+      "duration_no_cue": 13.8843,
+      "duration_cue": 15.5533
+    },
+    "12": {
+      "name": "Take me out to the ballgame (no lyrics)",
+      "duration_no_cue": 7.9123,
+      "duration_cue": 9.8123
+    },
+    "13": {
+      "name": "Jingle Bells (no lyrics)",
+      "duration_no_cue": 8.9502,
+      "duration_cue": 11.3142
+    },
+    "14": {
+      "name": "Mary Had a Little Lamb (no lyrics)",
+      "duration_no_cue": 12.2381,
+      "duration_cue": 15.2131
+    },
+    "21": {
+      "name": "Emperor Waltz",
+      "duration_no_cue": 8.3265,
+      "duration_cue": 10.3215
+    },
+    "22": {
+      "name": "Harry Potter Theme",
+      "duration_no_cue": 16.0162,
+      "duration_cue": 18.0622
+    },
+    "23": {
+      "name": "Star Wars Theme",
+      "duration_no_cue": 11.5423,
+      "duration_cue": 9.2353
+    },
+    "24": {
+      "name": "Eine Kleine Nachtmusik",
+      "duration_no_cue": 10.2359,
+      "duration_cue": 6.8709
+    }
+  }
+  
