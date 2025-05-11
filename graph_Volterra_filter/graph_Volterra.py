@@ -3,10 +3,7 @@ import scipy
 from scipy.linalg import eigh
 # from scipy.optimize import least_squares # Not used in this ALS version with direct lstsq
 import time
-<<<<<<< HEAD
 from tqdm import tqdm
-=======
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
 
 # Helper function to compute Graph Laplacian (combinatorial)
 def get_combinatorial_laplacian(adj_matrix):
@@ -36,11 +33,7 @@ class GraphVolterraModelTemporalBasis:
       (first K columns of U_P_T).
     - Learned via Alternating Least Squares (ALS).
     """
-<<<<<<< HEAD
     def __init__(self, U_G, U_P_T, K_T1, K_T2, num_classes=None):
-=======
-    def __init__(self, U_G, U_P_T, K_T1, K_T2):
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
         self.U_G = U_G
         self.U_P_T = U_P_T # Full temporal GFT basis
         self.N_spatial = U_G.shape[0]
@@ -66,15 +59,12 @@ class GraphVolterraModelTemporalBasis:
         self.H_hat_2_S = np.zeros((self.N_spatial, self.N_spatial))
         self.H_hat_2_T_coeffs = np.zeros((self.K_T2, self.K_T2)) # K_T2 x K_T2
 
-<<<<<<< HEAD
         self.num_classes = num_classes
         if num_classes is not None:
             self.classification_weights = np.random.randn(num_classes, self.N_effective) * 0.01
             self.classification_bias = np.random.randn(num_classes) * 0.01
         
 
-=======
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
     def _reconstruct_full_h_hat_1(self):
         """Reconstructs full h_hat_1 (N_eff,) from h_hat_1_coeffs."""
         # h_hat_1_coeffs is N_S x K_T1
@@ -112,11 +102,7 @@ class GraphVolterraModelTemporalBasis:
         self.H_hat_2_S = H_hat_2_S.reshape(self.N_spatial, self.N_spatial)
         self.H_hat_2_T_coeffs = H_hat_2_T_coeffs.reshape(self.K_T2, self.K_T2)
 
-<<<<<<< HEAD
     def forward(self, s_effective, apply_linear=False):
-=======
-    def forward(self, s_effective):
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
         s_col = s_effective.reshape(self.N_effective, 1)
         z0 = self.h0.reshape(self.N_effective, 1)
 
@@ -131,16 +117,12 @@ class GraphVolterraModelTemporalBasis:
         Y_prod = self.U_ST @ Y_hat_prod @ self.U_ST.T
         z2 = np.diag(Y_prod).reshape(self.N_effective, 1)
 
-<<<<<<< HEAD
         output_signal = (z0 + z1 + z2).flatten()
 
         if self.num_classes is not None and apply_linear:
             return self.classification_weights @ output_signal + self.classification_bias
 
         return output_signal
-=======
-        return (z0 + z1 + z2).flatten()
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
 
     def _build_phi_h0(self):
         return np.eye(self.N_effective)
@@ -222,7 +204,6 @@ class GraphVolterraModelTemporalBasis:
 
         return np.array(phi_H2_T_coeffs_cols).T # N_eff x (K_T2^2)
 
-<<<<<<< HEAD
     def fit(self, S_train_effective, Y_train_classes, num_als_iterations=5, l2_reg=1e-6):
         if self.num_classes is None:
             raise ValueError("num_classes must be specified for classification training.")
@@ -237,38 +218,22 @@ class GraphVolterraModelTemporalBasis:
         ])
 
         # Initialize Model Parameters
-=======
-
-    def fit(self, S_train_effective, Y_train_effective, num_als_iterations=5, l2_reg=1e-6):
-        num_samples_fit = S_train_effective.shape[0]
-        Y_target_flat = Y_train_effective.reshape(-1, 1)
-
-        print("Pre-calculating GFTs of training samples...")
-        S_hat_train_flat_all = np.array([gft(s.reshape(self.N_effective,1), self.U_ST).flatten() for s in S_train_effective])
-
-        # Initialize parameters
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
         self.h0 = np.random.randn(self.N_effective) * 0.01
         self.h_hat_1_coeffs = np.random.randn(self.N_spatial, self.K_T1) * 0.01
         self.H_hat_2_S = np.random.randn(self.N_spatial, self.N_spatial) * 0.01
         self.H_hat_2_T_coeffs = np.random.randn(self.K_T2, self.K_T2) * 0.01
         self.H_hat_2_S = (self.H_hat_2_S + self.H_hat_2_S.T) / 2
-<<<<<<< HEAD
         self.H_hat_2_T_coeffs = (self.H_hat_2_T_coeffs + self.H_hat_2_T_coeffs.T) / 2
         
 
         self.classification_weights = np.random.randn(self.num_classes, self.N_effective) * 0.01
         self.classification_bias = np.random.randn(self.num_classes) * 0.01
-=======
-        self.H_hat_2_T_coeffs = (self.H_hat_2_T_coeffs + self.H_hat_2_T_coeffs.T) / 2 # Symmetry for coeffs
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
 
         print(f"--- Starting ALS for {num_als_iterations} iterations ---")
         for als_iter in range(num_als_iterations):
             iter_time_start = time.time()
             print(f"\nALS Iteration {als_iter + 1}/{num_als_iterations}")
 
-<<<<<<< HEAD
             # 1. Compute Volterra Feature Representations
             X_features = np.array([
                 self.forward(S_train_effective[i]) 
@@ -294,92 +259,6 @@ class GraphVolterraModelTemporalBasis:
 
         print("\n--- ALS classification-only fitting complete ---")
 
-=======
-            # --- 1. Solve for h0 and h_hat_1_coeffs ---
-            # Target: Y - z2(current H2S, H2T_coeffs)
-            print(f"  Solving for h0, h_hat_1_coeffs (N_params = {self.N_effective + self.N_spatial * self.K_T1})...")
-            current_H2_eff = self._get_effective_H_hat_2()
-            Y_target_for_h0h1_list = []
-            for i in range(num_samples_fit):
-                s_hat_col = S_hat_train_flat_all[i,:].reshape(self.N_effective,1)
-                s_hat_outer_prod = s_hat_col @ s_hat_col.T
-                Y_hat_prod_i = current_H2_eff * s_hat_outer_prod
-                Y_prod_i = self.U_ST @ Y_hat_prod_i @ self.U_ST.T
-                z2_i = np.diag(Y_prod_i)
-                Y_target_for_h0h1_list.append(Y_train_effective[i,:] - z2_i)
-            Y_target_for_h0h1_flat = np.array(Y_target_for_h0h1_list).reshape(-1,1)
-
-            Phi_h0h1_list = []
-            for i in range(num_samples_fit):
-                s_hat_sample_flat_vec = S_hat_train_flat_all[i,:]
-                phi_h0_i = self._build_phi_h0()
-                phi_h1_coeffs_i = self._build_phi_h1_coeffs(s_hat_sample_flat_vec)
-                Phi_h0h1_list.append(np.hstack([phi_h0_i, phi_h1_coeffs_i]))
-            
-            Phi_h0h1_step = np.vstack(Phi_h0h1_list)
-            num_params_h0h1_step = Phi_h0h1_step.shape[1]
-            
-            A_h0h1 = Phi_h0h1_step.T @ Phi_h0h1_step + l2_reg * np.eye(num_params_h0h1_step)
-            b_h0h1 = Phi_h0h1_step.T @ Y_target_for_h0h1_flat
-            params_h0h1_sol, _, _, _ = np.linalg.lstsq(A_h0h1, b_h0h1, rcond=None)
-            
-            self.h0 = params_h0h1_sol[:self.N_effective].flatten()
-            self.h_hat_1_coeffs = params_h0h1_sol[self.N_effective:].reshape(self.N_spatial, self.K_T1)
-
-            # --- 2. Solve for H_hat_2_S ---
-            # Target: Y - z0(current h0) - z1(current h1_coeffs)
-            print(f"  Solving for H_hat_2_S (N_params = {self.N_spatial**2})...")
-            current_full_h_hat_1 = self._reconstruct_full_h_hat_1().reshape(self.N_effective,1)
-            Y_target_for_H2S_list = []
-            for i in range(num_samples_fit):
-                s_hat_col = S_hat_train_flat_all[i,:].reshape(self.N_effective,1)
-                z0_i = self.h0
-                z1_hat_i = current_full_h_hat_1 * s_hat_col
-                z1_i = igft(z1_hat_i, self.U_ST).flatten()
-                Y_target_for_H2S_list.append(Y_train_effective[i,:] - z0_i - z1_i)
-            Y_target_for_H2S_flat = np.array(Y_target_for_H2S_list).reshape(-1,1)
-            
-            current_full_H_hat_2_T = self._reconstruct_full_H_hat_2_T()
-            Phi_H2S_list = []
-            for i in range(num_samples_fit):
-                s_h_col_vec = S_hat_train_flat_all[i,:].reshape(self.N_effective, 1)
-                s_h_outer_prod_flat_vec = (s_h_col_vec @ s_h_col_vec.T).flatten()
-                Phi_H2S_list.append(self._build_phi_H2_S(s_h_outer_prod_flat_vec, current_full_H_hat_2_T))
-            
-            Phi_H2S_step = np.vstack(Phi_H2S_list)
-            num_params_H2S_step = Phi_H2S_step.shape[1]
-
-            A_H2S = Phi_H2S_step.T @ Phi_H2S_step + l2_reg * np.eye(num_params_H2S_step)
-            b_H2S = Phi_H2S_step.T @ Y_target_for_H2S_flat
-            params_H2S_sol, _, _, _ = np.linalg.lstsq(A_H2S, b_H2S, rcond=None)
-            self.H_hat_2_S = params_H2S_sol.reshape(self.N_spatial, self.N_spatial)
-
-            # --- 3. Solve for H_hat_2_T_coeffs ---
-            # Target: Y - z0(current h0) - z1(current h1_coeffs) (same target as for H2S)
-            print(f"  Solving for H_hat_2_T_coeffs (N_params = {self.K_T2**2})...")
-            # Y_target_for_H2T_flat is same as Y_target_for_H2S_flat
-
-            Phi_H2Tcoeffs_list = []
-            for i in range(num_samples_fit):
-                s_h_col_vec = S_hat_train_flat_all[i,:].reshape(self.N_effective, 1)
-                s_h_outer_prod_flat_vec = (s_h_col_vec @ s_h_col_vec.T).flatten()
-                Phi_H2Tcoeffs_list.append(self._build_phi_H2_T_coeffs(s_h_outer_prod_flat_vec, self.H_hat_2_S)) # Use updated H2S
-            
-            Phi_H2Tcoeffs_step = np.vstack(Phi_H2Tcoeffs_list)
-            num_params_H2Tcoeffs_step = Phi_H2Tcoeffs_step.shape[1]
-
-            A_H2Tcoeffs = Phi_H2Tcoeffs_step.T @ Phi_H2Tcoeffs_step + l2_reg * np.eye(num_params_H2Tcoeffs_step)
-            b_H2Tcoeffs = Phi_H2Tcoeffs_step.T @ Y_target_for_H2S_flat # Using same target
-            params_H2Tcoeffs_sol, _, _, _ = np.linalg.lstsq(A_H2Tcoeffs, b_H2Tcoeffs, rcond=None)
-            self.H_hat_2_T_coeffs = params_H2Tcoeffs_sol.reshape(self.K_T2, self.K_T2)
-            
-            # --- Iteration complete, calculate SSR ---
-            Y_pred_current_flat = np.array([self.forward(s) for s in S_train_effective]).flatten()
-            current_ssr = np.sum((Y_target_flat.flatten() - Y_pred_current_flat)**2)
-            iter_time_end = time.time()
-            print(f"  ALS Iteration {als_iter + 1} complete. SSR: {current_ssr:.4e}. Time: {iter_time_end - iter_time_start:.2f}s")
-        print("\n--- ALS fitting complete ---")
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
 
 # --- Example Usage ---
 if __name__ == '__main__':
@@ -469,7 +348,3 @@ if __name__ == '__main__':
     
     total_script_end_time = time.time()
     print(f"\n--- Total script execution time: {total_script_end_time - total_script_start_time:.2f} seconds ---")
-<<<<<<< HEAD
-=======
-
->>>>>>> 394c7155ace262f89db83c8bdec54dae595b5c33
