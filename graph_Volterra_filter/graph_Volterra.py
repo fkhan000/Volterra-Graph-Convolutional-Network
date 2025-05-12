@@ -224,7 +224,6 @@ class GraphVolterraModelTemporalBasis:
         self.H_hat_2_T_coeffs = np.random.randn(self.K_T2, self.K_T2) * 0.01
         self.H_hat_2_S = (self.H_hat_2_S + self.H_hat_2_S.T) / 2
         self.H_hat_2_T_coeffs = (self.H_hat_2_T_coeffs + self.H_hat_2_T_coeffs.T) / 2
-        
 
         self.classification_weights = np.random.randn(self.num_classes, self.N_effective) * 0.01
         self.classification_bias = np.random.randn(self.num_classes) * 0.01
@@ -236,7 +235,7 @@ class GraphVolterraModelTemporalBasis:
 
             # 1. Compute Volterra Feature Representations
             X_features = np.array([
-                self.forward(S_train_effective[i]) 
+                self.forward(S_train_effective[i], apply_linear=False) 
                 for i in range(num_samples_fit)
             ])  # Shape: (num_samples_fit, N_effective)
 
@@ -246,18 +245,76 @@ class GraphVolterraModelTemporalBasis:
             B_cls = X_aug.T @ Y_target_flat
             params_cls, _, _, _ = np.linalg.lstsq(A_cls, B_cls, rcond=None)
 
-            self.classification_weights = params_cls[:-1, :].T  # Shape: (num_classes, N_effective)
+            self.classification_weights = params_cls[:-1, :].T  # (num_classes, N_effective)
             self.classification_bias = params_cls[-1, :]
 
-            # 3. Evaluate Classification Performance (Optional)
+            # 3. Compute Residual in Output Space
             logits = (X_features @ self.classification_weights.T) + self.classification_bias
+            residual = Y_target_flat - logits
+            residual_signal = np.sum(residual, axis=1).reshape(-1, 1)  # Reduce to a single value per sample
+
+            # 4. Solve for h0 (Closed Form)
+            A_h0 = np.eye(self.N_effective) * (num_samples_fit + l2_reg)
+            b_h0 = np.sum(residual_signal) * np.ones((self.N_effective, 1))
+            self.h0 = np.linalg.solve(A_h0, b_h0).flatten()
+
+            # 5. Solve for h_hat_1_coeffs
+            Phi_h1_list = []
+            for i in range(num_samples_fit):
+                phi_h1_i = self._build_phi_h1_coeffs(S_hat_train_flat_all[i, :])
+                Phi_h1_list.append(phi_h1_i)
+
+            Phi_h1_step = np.vstack(Phi_h1_list)  # Shape: (num_samples_fit * N_effective, N_spatial * K_T1)
+            Y_target_h1 = np.repeat(residual_signal, self.N_effective, axis=0)
+
+            A_h1 = Phi_h1_step.T @ Phi_h1_step + l2_reg * np.eye(Phi_h1_step.shape[1])
+            b_h1 = Phi_h1_step.T @ Y_target_h1
+            params_h1, _, _, _ = np.linalg.lstsq(A_h1, b_h1, rcond=None)
+            self.h_hat_1_coeffs = params_h1.reshape(self.N_spatial, self.K_T1)
+
+            # 6. Solve for H_hat_2_S
+            current_full_H_hat_2_T = self._reconstruct_full_H_hat_2_T()
+            Phi_H2_S_list = []
+            for i in range(num_samples_fit):
+                s_hat_col = S_hat_train_flat_all[i, :].reshape(self.N_effective, 1)
+                s_outer_flat = (s_hat_col @ s_hat_col.T).flatten()
+                Phi_H2_S_list.append(self._build_phi_H2_S(s_outer_flat, current_full_H_hat_2_T))
+
+            Phi_H2_S_step = np.vstack(Phi_H2_S_list)
+            Y_target_H2_S = np.repeat(residual_signal, self.N_effective, axis=0)
+
+            A_H2_S = Phi_H2_S_step.T @ Phi_H2_S_step + l2_reg * np.eye(Phi_H2_S_step.shape[1])
+            b_H2_S = Phi_H2_S_step.T @ Y_target_H2_S
+            params_H2_S, _, _, _ = np.linalg.lstsq(A_H2_S, b_H2_S, rcond=None)
+            self.H_hat_2_S = params_H2_S.reshape(self.N_spatial, self.N_spatial)
+
+            # 7. Solve for H_hat_2_T_coeffs
+            Phi_H2_T_list = []
+            for i in range(num_samples_fit):
+                s_hat_col = S_hat_train_flat_all[i, :].reshape(self.N_effective, 1)
+                s_outer_flat = (s_hat_col @ s_hat_col.T).flatten()
+                Phi_H2_T_list.append(self._build_phi_H2_T_coeffs(s_outer_flat, self.H_hat_2_S))
+
+            Phi_H2_T_step = np.vstack(Phi_H2_T_list)
+            Y_target_H2_T = np.repeat(residual_signal, self.N_effective, axis=0)
+
+            A_H2_T = Phi_H2_T_step.T @ Phi_H2_T_step + l2_reg * np.eye(Phi_H2_T_step.shape[1])
+            b_H2_T = Phi_H2_T_step.T @ Y_target_H2_T
+            params_H2_T, _, _, _ = np.linalg.lstsq(A_H2_T, b_H2_T, rcond=None)
+            self.H_hat_2_T_coeffs = params_H2_T.reshape(self.K_T2, self.K_T2)
+
+            # --- Evaluate Current MSE and Accuracy ---
+            logits = (X_features @ self.classification_weights.T) + self.classification_bias
+            mse_loss = np.mean((Y_target_flat - logits) ** 2)
             preds = np.argmax(logits, axis=1)
             true_labels = np.argmax(Y_train_classes, axis=1)
             acc = np.mean(preds == true_labels)
-            iter_time_end = time.time()
-            print(f"  Iteration {als_iter + 1} Classification Accuracy: {acc:.4f}. Time: {iter_time_end - iter_time_start:.2f}s")
 
-        print("\n--- ALS classification-only fitting complete ---")
+            iter_time_end = time.time()
+            print(f"  Iteration {als_iter + 1}: MSE Loss: {mse_loss:.4f}, Accuracy: {acc:.4f}, Time: {iter_time_end - iter_time_start:.2f}s")
+
+        print("\n--- ALS fitting complete ---")
+
 
 
 # --- Example Usage ---

@@ -57,10 +57,11 @@ if __name__ == "__main__":
     
     train_adj, train_X, train_labels, order = read_files("train")
     _, test_X, test_labels, _ = read_files("test", order=order)
-    N_temporal_nodes = 30
-    N_spatial_nodes = 30
+    N_temporal_nodes = 15
+    N_spatial_nodes = 15
 
     connectivity_matrix = np.mean(train_adj, axis=0)
+    connectivity_matrix = (connectivity_matrix > 0.2)
 
     selected_nodes = select_nodes(connectivity_matrix, num_nodes=N_spatial_nodes)
     connectivity_matrix = connectivity_matrix[selected_nodes][:, selected_nodes]
